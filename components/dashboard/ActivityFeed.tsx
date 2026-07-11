@@ -2,13 +2,14 @@
 
 import React, { useState, useEffect } from "react";
 import { IconSpinner } from "@/components/auth/shared/icons";
-import { 
-  IconBookOpen, 
-  IconClipboardCheck, 
-  IconStar, 
-  IconReceipt 
+import {
+  IconBookOpen,
+  IconClipboardCheck,
+  IconStar,
+  IconReceipt,
 } from "@/components/dashboard/icons";
 import { CheckCircle2, Clock, ChevronLeft, ChevronRight } from "lucide-react";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 
 interface ActivityItem {
   id: string;
@@ -19,52 +20,40 @@ interface ActivityItem {
 }
 
 export function ActivityFeed() {
-  const [activities, setActivities] = useState<ActivityItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [error, setError] = useState(false);
 
   const fetchActivities = async (pageNumber: number) => {
-    try {
-      setLoading(true);
-      const res = await fetch(`/api/proxy/users/me/dashboard/activity?page=${pageNumber}&page_size=5`);
-      const data = await res.json();
-      
-      if (res.ok && (data.data || data.items)) {
-        const items = data.data || data.items || [];
-        const fetchedTotalPages = data.meta?.total_pages || data.total_pages || 1;
-
-        setActivities(items);
-        setTotalPages(fetchedTotalPages);
-        setError(false);
-      } else {
-        setError(true);
-      }
-    } catch (e) {
-      setError(true);
-    } finally {
-      setLoading(false);
+    const res = await fetch(
+      `/api/proxy/users/me/dashboard/activity?page=${pageNumber}&page_size=5`,
+    );
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.message || "Failed to fetch activities");
     }
+    return data;
   };
 
-  useEffect(() => {
-    fetchActivities(1);
-  }, []);
+  const { data, isPending, isError, isFetching } = useQuery({
+    queryKey: ["dashboard-activities", page],
+    queryFn: () => fetchActivities(page),
+    placeholderData: keepPreviousData,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const activities: ActivityItem[] = data?.data || data?.items || [];
+  const totalPages = data?.meta?.total_pages || data?.total_pages || 1;
+  const loading = isPending;
+  const error = isError;
 
   const handleNext = () => {
     if (page < totalPages) {
-      const nextPage = page + 1;
-      setPage(nextPage);
-      fetchActivities(nextPage);
+      setPage(page + 1);
     }
   };
 
   const handlePrev = () => {
     if (page > 1) {
-      const prevPage = page - 1;
-      setPage(prevPage);
-      fetchActivities(prevPage);
+      setPage(page - 1);
     }
   };
 
@@ -74,87 +63,123 @@ export function ActivityFeed() {
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
     if (diffInSeconds < 60) return "Just now";
-    
+
     const diffInMinutes = Math.floor(diffInSeconds / 60);
-    if (diffInMinutes < 60) return `${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''} ago`;
-    
+    if (diffInMinutes < 60)
+      return `${diffInMinutes} minute${diffInMinutes > 1 ? "s" : ""} ago`;
+
     const diffInHours = Math.floor(diffInMinutes / 60);
-    if (diffInHours < 24) return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
-    
+    if (diffInHours < 24)
+      return `${diffInHours} hour${diffInHours > 1 ? "s" : ""} ago`;
+
     const diffInDays = Math.floor(diffInHours / 24);
     if (diffInDays === 1) return "Yesterday";
     if (diffInDays < 7) return `${diffInDays} days ago`;
-    
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
   };
 
   const getActivityDetails = (item: ActivityItem) => {
     const meta = item.metadata_json || {};
-    
+
     switch (item.activity_type) {
       case "COURSE_ENROLLED":
         return {
           icon: <IconBookOpen />,
-          color: "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400",
+          color:
+            "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400",
           text: (
             <span>
-              Enrolled in <span className="font-bold">{meta.course_title || "a new course"}</span>
+              Enrolled in{" "}
+              <span className="font-bold">
+                {meta.course_title || "a new course"}
+              </span>
             </span>
           ),
         };
       case "QUIZ_COMPLETED":
         return {
           icon: <IconClipboardCheck />,
-          color: meta.passed 
+          color: meta.passed
             ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
             : "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400",
           text: (
             <span>
-              Completed {meta.item_title ? <span className="font-bold">{meta.item_title}</span> : "a quiz"} 
-              {meta.course_title ? ` in ${meta.course_title}` : ""} with a score of <span className="font-bold">{meta.score || 0}%</span>
+              Completed{" "}
+              {meta.item_title ? (
+                <span className="font-bold">{meta.item_title}</span>
+              ) : (
+                "a quiz"
+              )}
+              {meta.course_title ? ` in ${meta.course_title}` : ""} with a score
+              of <span className="font-bold">{meta.score || 0}%</span>
             </span>
           ),
         };
       case "REVIEW_CREATED":
         return {
           icon: <IconStar />,
-          color: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400",
+          color:
+            "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400",
           text: (
             <span>
-              Left a <span className="font-bold">{meta.rating} star</span> review for <span className="font-bold">{meta.course_title || "a course"}</span>
+              Left a <span className="font-bold">{meta.rating} star</span>{" "}
+              review for{" "}
+              <span className="font-bold">
+                {meta.course_title || "a course"}
+              </span>
             </span>
           ),
         };
       case "REVIEW_EDITED":
         return {
           icon: <IconStar />,
-          color: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400",
+          color:
+            "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400",
           text: (
             <span>
-              Updated your <span className="font-bold">{meta.rating} star</span> review for <span className="font-bold">{meta.course_title || "a course"}</span>
+              Updated your <span className="font-bold">{meta.rating} star</span>{" "}
+              review for{" "}
+              <span className="font-bold">
+                {meta.course_title || "a course"}
+              </span>
             </span>
           ),
         };
       case "REVIEW_DELETED":
         return {
           icon: <IconStar />,
-          color: "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400",
+          color:
+            "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400",
           text: (
             <span>
-              Deleted your review for <span className="font-bold">{meta.course_title || "a course"}</span>
+              Deleted your review for{" "}
+              <span className="font-bold">
+                {meta.course_title || "a course"}
+              </span>
             </span>
           ),
         };
       case "PAYMENT_SUCCESSFUL":
-        const purchaseName = meta.course_title || meta.plan_name || "a purchase";
+        const purchaseName =
+          meta.course_title || meta.plan_name || "a purchase";
         return {
           icon: <IconReceipt />,
-          color: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400",
+          color:
+            "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400",
           text: (
             <span>
-              Payment successful for <span className="font-bold">{purchaseName}</span>
+              Payment successful for{" "}
+              <span className="font-bold">{purchaseName}</span>
               {meta.amount && (
-                <span className="font-bold"> (₦{meta.amount.toLocaleString()})</span>
+                <span className="font-bold">
+                  {" "}
+                  (₦{meta.amount.toLocaleString()})
+                </span>
               )}
             </span>
           ),
@@ -179,8 +204,12 @@ export function ActivityFeed() {
   if (error && activities.length === 0) {
     return (
       <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-6 sm:p-8 shadow-sm">
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Recent Activity</h3>
-        <p className="text-sm text-red-500">Failed to load activity feed. Please try again later.</p>
+        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+          Recent Activity
+        </h3>
+        <p className="text-sm text-red-500">
+          Failed to load activity feed. Please try again later.
+        </p>
       </div>
     );
   }
@@ -188,14 +217,16 @@ export function ActivityFeed() {
   return (
     <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden relative">
       <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white">Recent Activity</h3>
+        <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+          Recent Activity
+        </h3>
         <span className="text-xs font-semibold px-2.5 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-full flex items-center gap-1.5">
           <Clock className="w-3.5 h-3.5" />
           Timeline
         </span>
       </div>
 
-      {loading && (
+      {isFetching && !isPending && (
         <div className="absolute inset-0 bg-white/50 dark:bg-gray-900/50 backdrop-blur-[2px] z-10 flex items-center justify-center min-h-[200px]">
           <IconSpinner className="w-8 h-8 animate-spin text-[#2D6A4F]" />
         </div>
@@ -206,8 +237,12 @@ export function ActivityFeed() {
           <div className="w-12 h-12 bg-gray-50 dark:bg-gray-800 rounded-full flex items-center justify-center mb-3">
             <Clock className="w-6 h-6 text-gray-400" />
           </div>
-          <p className="text-gray-500 dark:text-gray-400 font-medium">No recent activity found.</p>
-          <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">When you take courses or quizzes, they will appear here.</p>
+          <p className="text-gray-500 dark:text-gray-400 font-medium">
+            No recent activity found.
+          </p>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+            When you take courses or quizzes, they will appear here.
+          </p>
         </div>
       ) : (
         <div className="p-0">
@@ -215,21 +250,25 @@ export function ActivityFeed() {
             {activities.map((item, i) => {
               const details = getActivityDetails(item);
               const isLast = i === activities.length - 1;
-              
+
               return (
                 <li
                   key={item.id}
                   className={`relative p-5 sm:px-6 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50 ${
-                    !isLast ? "border-b border-gray-100 dark:border-gray-800/80" : ""
+                    !isLast
+                      ? "border-b border-gray-100 dark:border-gray-800/80"
+                      : ""
                   }`}
                 >
                   <div className="flex items-start gap-4">
-                    <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center ${details.color}`}>
+                    <div
+                      className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center ${details.color}`}
+                    >
                       <div className="[&>svg]:w-5 [&>svg]:h-5">
                         {details.icon}
                       </div>
                     </div>
-                    
+
                     <div className="flex-1 min-w-0 pt-0.5">
                       <p className="text-sm font-medium text-gray-900 dark:text-white leading-snug">
                         {details.text}
@@ -243,7 +282,7 @@ export function ActivityFeed() {
               );
             })}
           </ul>
-          
+
           {(page > 1 || page < totalPages) && (
             <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/30 flex items-center justify-between">
               <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
