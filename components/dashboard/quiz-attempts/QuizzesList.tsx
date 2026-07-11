@@ -66,27 +66,35 @@ export default function QuizzesList({
         return (
           <div className="flex items-center gap-1.5 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2.5 py-1 rounded-lg border border-green-200 dark:border-green-800/30">
             <CheckCircle className="w-4 h-4" />
-            <span className="text-xs font-bold uppercase tracking-wider">Passed</span>
+            <span className="text-xs font-bold uppercase tracking-wider">
+              Passed
+            </span>
           </div>
         );
       case "FAILED":
         return (
           <div className="flex items-center gap-1.5 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-2.5 py-1 rounded-lg border border-red-200 dark:border-red-800/30">
             <XCircle className="w-4 h-4" />
-            <span className="text-xs font-bold uppercase tracking-wider">Failed</span>
+            <span className="text-xs font-bold uppercase tracking-wider">
+              Failed
+            </span>
           </div>
         );
       case "NOT_STARTED":
         return (
           <div className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2.5 py-1 rounded-lg border border-blue-200 dark:border-blue-800/30">
             <Clock className="w-4 h-4" />
-            <span className="text-xs font-bold uppercase tracking-wider">Not Started</span>
+            <span className="text-xs font-bold uppercase tracking-wider">
+              Not Started
+            </span>
           </div>
         );
       default:
         return (
           <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-700">
-            <span className="text-xs font-bold uppercase tracking-wider">{status}</span>
+            <span className="text-xs font-bold uppercase tracking-wider">
+              {status}
+            </span>
           </div>
         );
     }
@@ -95,7 +103,7 @@ export default function QuizzesList({
   return (
     <div className="flex flex-col gap-8">
       {/* Tabs */}
-      <div className="flex items-center overflow-x-auto hide-scrollbar gap-2 p-1.5 bg-gray-50/80 dark:bg-gray-900/50 backdrop-blur-md rounded-2xl w-fit border border-gray-200/50 dark:border-gray-800/50">
+      <div className="flex items-center overflow-x-auto hide-scrollbar gap-2 p-1.5 bg-gray-50/80 dark:bg-gray-900/50 backdrop-blur-md rounded-2xl w-full md:w-fit max-w-full border border-gray-200/50 dark:border-gray-800/50">
         {TABS.map((tab) => {
           const isActive = currentStatus === tab.id;
           return (
@@ -104,9 +112,10 @@ export default function QuizzesList({
               onClick={() => handleTabChange(tab.id)}
               className={`
                 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 whitespace-nowrap
-                ${isActive 
-                  ? "bg-white dark:bg-gray-800 text-[#2D6A4F] dark:text-[#52b788] shadow-sm ring-1 ring-gray-200/50 dark:ring-gray-700/50" 
-                  : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
+                ${
+                  isActive
+                    ? "bg-white dark:bg-gray-800 text-[#2D6A4F] dark:text-[#52b788] shadow-sm ring-1 ring-gray-200/50 dark:ring-gray-700/50"
+                    : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
                 }
               `}
             >
@@ -125,9 +134,9 @@ export default function QuizzesList({
           icon={IconClipboardCheck}
           title="No quizzes found"
           description={
-            currentStatus === "ALL" 
+            currentStatus === "ALL"
               ? "You don't have any quizzes yet. Enroll in a course to get started!"
-              : `You don't have any quizzes matching "${TABS.find(t => t.id === currentStatus)?.label}".`
+              : `You don't have any quizzes matching "${TABS.find((t) => t.id === currentStatus)?.label}".`
           }
         />
       ) : (
@@ -156,7 +165,7 @@ export default function QuizzesList({
                     Score
                   </p>
                   <p className="text-xl font-extrabold text-gray-900 dark:text-white">
-                    {typeof quiz.score === 'number' ? `${quiz.score}%` : "-"}
+                    {typeof quiz.score === "number" ? `${quiz.score}%` : "-"}
                   </p>
                 </div>
                 <div className="text-right">
@@ -164,11 +173,13 @@ export default function QuizzesList({
                     Last Attempt
                   </p>
                   <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                    {quiz.attempted_at ? new Intl.DateTimeFormat('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric'
-                    }).format(new Date(quiz.attempted_at)) : "Never"}
+                    {quiz.attempted_at
+                      ? new Intl.DateTimeFormat("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        }).format(new Date(quiz.attempted_at))
+                      : "Never"}
                   </p>
                 </div>
               </div>
@@ -181,7 +192,19 @@ export default function QuizzesList({
       {totalItems > limit && (
         <div className="flex items-center justify-between px-2 pt-4">
           <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
-            Showing <span className="font-bold text-gray-900 dark:text-white">{(currentPage - 1) * limit + 1}</span> to <span className="font-bold text-gray-900 dark:text-white">{Math.min(currentPage * limit, totalItems)}</span> of <span className="font-bold text-gray-900 dark:text-white">{totalItems}</span> quizzes
+            Showing{" "}
+            <span className="font-bold text-gray-900 dark:text-white">
+              {(currentPage - 1) * limit + 1}
+            </span>{" "}
+            to{" "}
+            <span className="font-bold text-gray-900 dark:text-white">
+              {Math.min(currentPage * limit, totalItems)}
+            </span>{" "}
+            of{" "}
+            <span className="font-bold text-gray-900 dark:text-white">
+              {totalItems}
+            </span>{" "}
+            quizzes
           </p>
           <div className="flex gap-2">
             <button
